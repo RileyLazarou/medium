@@ -6,10 +6,10 @@ import tensorflow.keras.layers as layers
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
-LATENT_DIMENSION = 8
+LATENT_DIMENSION = 32
 IMAGE_DIMENSIONS = (28, 28, 1)
-BATCH_SIZE = 128
-EPOCHS = 200
+BATCH_SIZE = 512
+EPOCHS = 75
 LR_GAN = 2e-4
 LR_AE = LR_GAN * 1e-1
 
@@ -155,13 +155,15 @@ generate_noise = lambda : np.random.random((BATCH_SIZE, LATENT_DIMENSION)) * 2 -
 
 batches = X_train.shape[0] // BATCH_SIZE
 for epoch in range(EPOCHS):
+	running_loss = 0
 	for batch in range(batches):
-		print(f'Epoch {epoch+1}: {batch*BATCH_SIZE:05d}/{X_train.shape[0]:05d}', end='\r')
 		real_samples = X_train[np.random.randint(0, X_train.shape[0], BATCH_SIZE)]
-		AE.train_on_batch(real_samples, real_samples)
+		_loss = AE.train_on_batch(real_samples, real_samples)
+		running_loss += _loss
+		print(f'Epoch {epoch+1}: {batch*BATCH_SIZE:05d}/{X_train.shape[0]:05d}; loss={running_loss / (batch+1):.3f}', end='\r')
 	test_reconstructions = AE.predict(X_test[:100])
 	images = [x for pair in zip(X_test[:100], test_reconstructions) for x in pair]
-	visualize_images(images, 10)
+visualize_images(images, 10)
 
 
 
