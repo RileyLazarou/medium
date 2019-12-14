@@ -122,13 +122,13 @@ def make_classifier():
     input_layer = layers.Input((28, 28, 1))
     conv1 = layers.Conv2D(filters=4, kernel_size=KERNEL, padding='same', activation=ACTIVATION, kernel_initializer=INITIALIZER())(input_layer)
     conv2 = layers.Conv2D(filters=4, kernel_size=KERNEL, padding='same', activation=ACTIVATION, kernel_initializer=INITIALIZER())(conv1)
-    mp1 = layers.MaxPooling2D(pool_size=2, padding='same')(conv1) # 14x14
+    mp1 = layers.MaxPooling2D(pool_size=2, padding='same')(conv2) # 14x14
     conv3 = layers.Conv2D(filters=8, kernel_size=KERNEL, padding='same', activation=ACTIVATION, kernel_initializer=INITIALIZER())(mp1)
     conv4 = layers.Conv2D(filters=8, kernel_size=KERNEL, padding='same', activation=ACTIVATION, kernel_initializer=INITIALIZER())(conv3)
-    mp2 = layers.MaxPooling2D(pool_size=2, padding='same')(conv3) # 7x7
+    mp2 = layers.MaxPooling2D(pool_size=2, padding='same')(conv4) # 7x7
     conv5 = layers.Conv2D(filters=16, kernel_size=KERNEL, padding='same', activation=ACTIVATION, kernel_initializer=INITIALIZER())(mp2)
     conv6 = layers.Conv2D(filters=16, kernel_size=KERNEL, padding='same', activation=ACTIVATION, kernel_initializer=INITIALIZER())(conv5)
-    flattened = layers.Flatten()(conv5)
+    flattened = layers.Flatten()(conv6)
     dense1 = layers.Dense(64, activation='relu')(flattened)
     dense2 = layers.Dense(32, activation='relu')(dense1)
     output_layer = layers.Dense(10, activation='softmax')(dense2)
