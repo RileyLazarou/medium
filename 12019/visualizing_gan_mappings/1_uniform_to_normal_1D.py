@@ -35,7 +35,7 @@ def build_generator(LATENT_DIM, output_dim):
     input_layer = layers.Input((LATENT_DIM,))
     X = input_layer
     for i in range(4):
-        X = layers.Dense(256)(X)
+        X = layers.Dense(16)(X)
         X = layers.LeakyReLU(0.1)(X)
     output_layer = layers.Dense(output_dim)(X)
     G = Model(input_layer, output_layer)
@@ -49,11 +49,11 @@ def build_discriminator(dim):
     input_layer = layers.Input((dim,))
     X = input_layer
     for i in range(2):
-        X = layers.Dense(128)(X)
+        X = layers.Dense(64)(X)
         X = layers.LeakyReLU(0.1)(X)
     output_layer = layers.Dense(1, activation='sigmoid')(X)
     D = Model(input_layer, output_layer)
-    D.compile(Adam(learning_rate=0.0004, beta_1=0.0),
+    D.compile(Adam(learning_rate=0.002, beta_1=0.5),
                         loss='binary_crossentropy',
                         metrics=['accuracy'])
     return D
@@ -67,15 +67,15 @@ def build_GAN(G, D, LATENT_DIM):
     X = G(input_layer)
     output_layer = D(X)
     GAN = Model(input_layer, output_layer)
-    GAN.compile(Adam(learning_rate=0.0001, beta_1=0.5),
+    GAN.compile(Adam(learning_rate=0.001, beta_1=0.5),
                         loss='binary_crossentropy',
                         metrics=['accuracy'])
     return GAN
 
 
 ### Visualizations
-grid_latent = np.linspace(-1, 1, 402)[1:-1].reshape((-1, 1))
-grid_sample = np.linspace(-4, 4, 1002)[1:-1].reshape((-1, 1))
+grid_latent = np.linspace(-1, 1, 203)[1:-1].reshape((-1, 1))
+grid_sample = np.linspace(-3, 3, 603)[1:-1].reshape((-1, 1))
 test_noise = generate_noise(5000, LATENT_DIM)
 test_samples = uniform_to_normal(test_noise)
 def plot(G, D, step, step_count, D_accuracy, D_loss, G_accuracy, G_loss, filename):
@@ -112,19 +112,25 @@ def plot(G, D, step, step_count, D_accuracy, D_loss, G_accuracy, G_loss, filenam
                     zorder=45,
                     alpha=0.8,)
     ax[0, 0].set_xlim(-5, max(max(step_count), NUM_BATCHES)+5)
-    ax[0, 0].set_ylim(-0.1, 2.1)
+    ax[0, 0].set_ylim(-0.05, 1.55)
+    ax[0, 0].set_xlabel('Epoch')
     ax[0, 0].legend(loc=1)
 
     # [0, 1]: Plot actual samples and fake samples
 
     fake_samples = G.predict(test_noise, batch_size=len(test_noise))
-    sns.kdeplot(test_samples.flatten(), c='blue', alpha=0.6, label='Real', ax=ax[0, 1], shade=True)
+    #sns.kdeplot(test_samples.flatten(), c='blue', alpha=0.6, label='Real', ax=ax[0, 1], shade=True)
+    x_vals = np.linspace(-3, 3, 301)
+    y_vals = stats.norm(0,1).pdf(x_vals)
+    ax[0, 1].plot(x_vals, y_vals, color='blue', label='real')
+    ax[0, 1].fill_between(x_vals, np.zeros(len(x_vals)), y_vals, color='blue', alpha=0.6)
+    #sns.kdeplot(test_samples.flatten(), c='blue', alpha=0.6, label='Real', ax=ax[0, 1], shade=True)
     sns.kdeplot(fake_samples.flatten(), c='red', alpha=0.6, label='GAN', ax=ax[0, 1], shade=True)
-    ax[0, 1].set_xlim(-4, 4)
+    ax[0, 1].set_xlim(-3, 3)
     ax[0, 1].set_ylim(0, 0.82)
     ax[0, 1].legend(loc=1)
-    ax[0, 1].set_xlabel('value')
-    ax[0, 1].set_ylabel('probability density')
+    ax[0, 1].set_xlabel('Sample Space')
+    ax[0, 1].set_ylabel('Probability Density')
 
 
     # [1, 0]: Confident real input
@@ -133,18 +139,20 @@ def plot(G, D, step, step_count, D_accuracy, D_loss, G_accuracy, G_loss, filenam
     GAN_mapping = G.predict(grid_latent)
     ax[1, 0].scatter(grid_latent.flatten(), true_mappings.flatten(), 
                 edgecolor='blue', facecolor='None', s=5, alpha=1, 
-                linewidth=1, label='Real Mapping (CDF)')
+                linewidth=1, label='Real Mapping')
     ax[1, 0].scatter(grid_latent.flatten(), GAN_mapping.flatten(), 
                 edgecolor='red', facecolor='None', s=5, alpha=1, 
                 linewidth=1, label='GAN Mapping')
     ax[1, 0].legend(loc=8)
     ax[1, 0].set_xlim(-1, 1)
-    ax[1, 0].set_ylim(-4, 4)
+    ax[1, 0].set_ylim(-3, 3)
+    ax[1, 0].set_xlabel('Latent Space')
+    ax[1, 0].set_ylabel('Sample Space')
 
     # [1, 1]: Confident real ouput
     confidences = D.predict(grid_sample, batch_size=BATCH_SIZE).flatten()
     ax[1, 1].plot(grid_sample.flatten(), confidences, c='k')
-    lower, upper = -4, 4
+    lower, upper = -3, 3
     for i in range(0, len(confidences), 50):
         if i ==0:
             continue
@@ -169,32 +177,10 @@ paths = ['ims',
                 'ims/1_1D_normal/a', 
                 'ims/1_1D_normal/b', 
                 'ims/1_1D_normal/c', 
-            'ims/2_2D_normal', 
-                'ims/2_2D_normal/a', 
-                'ims/2_2D_normal/b', 
         ]
 for i in paths:
     if not os.path.exists(i):
         os.makedirs(i)
-
-
-## Part 1a: 
-'''
-G = build_generator(LATENT_DIM, 1)
-G.compile('Adam', loss='mse')
-
-for i in range(2000):
-    print(i, end='\r')
-    noise = generate_noise(BATCH_SIZE, LATENT_DIM)
-    transformed = uniform_to_normal(noise)
-    G.train_on_batch(noise, transformed)
-
-test_noise = generate_noise(1000, LATENT_DIM)
-test_samples = uniform_to_normal(test_noise)
-generated = G.predict(test_noise)
-plt.scatter(test_samples, generated)
-plt.show()
-'''
 
 ## Part 1b: 1D uniform to 1D normal GAN
 ### Setup
@@ -305,9 +291,3 @@ plt.ylim(-4, 4)
 plt.tight_layout()
 plt.savefig(f'ims/1_1D_normal/c/1c.true.png')
 plt.close()
-
-sys.exit()
-
-############################################################
-######################### OLD CODE #########################
-############################################################
