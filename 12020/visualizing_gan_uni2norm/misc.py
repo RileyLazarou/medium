@@ -61,7 +61,7 @@ plt.scatter(grid_latent.flatten(), true_mappings.flatten(),
             linewidth=1, label='f(z)=(z+1)/2')
 plt.scatter(grid_latent.flatten(), true_mappings.flatten()[::-1], 
             edgecolor='green', facecolor='None', s=5, alpha=1, 
-            linewidth=1, label='f(z)=(z+1)/2')
+            linewidth=1, label='f(z)=(1-z)/2')
 plt.scatter(grid_latent.flatten(), stats.norm(0, 1).ppf(piecewise), 
             edgecolor='red', facecolor='None', s=5, alpha=1, 
             linewidth=1, label='f(z)=[piecewise function]')
