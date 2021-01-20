@@ -4,15 +4,16 @@ from typing import List
 import numpy as np
 import torch
 from torch import nn
-import torchvision as tv
-import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
+
+import config
 
 
 class Encoder(nn.Module):
-    """A simple, fully-connected encoder network for MNIST"""
+    """A simple, fully-connected encoder network for MNIST."""
 
     def __init__(self, latent_dim: int) -> None:
+        """Initialize the encoder with a specified latent dim."""
         super().__init__()
         self.module = nn.Sequential(
             nn.Linear(28*28, 128),
@@ -32,9 +33,10 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    """A simple, fully-connected decoder network for MNIST"""
+    """A simple, fully-connected decoder network for MNIST."""
 
     def __init__(self, latent_dim: int) -> None:
+        """Initialize the decoder with a specified latent dim."""
         super().__init__()
         self.module = nn.Sequential(
             nn.Linear(latent_dim, 64),
@@ -56,6 +58,7 @@ class AutoEncoder:
     """A simple, fully-connected AutoEncoder for MNIST digits."""
 
     def __init__(self, dataloader: DataLoader, latent_dim: int = 2) -> None:
+        """Initialize the autoencoder with a dataloader and latent dim."""
         self.dataloader = dataloader
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.encoder = Encoder(latent_dim).to(self.device)
@@ -63,7 +66,7 @@ class AutoEncoder:
         self.criterion = nn.L1Loss()
         self.optim = torch.optim.Adam(
             (*self.encoder.parameters(), *self.decoder.parameters()),
-            lr=1e-3,)
+            lr=config.LR,)
 
     def encode(self, image: torch.Tensor) -> torch.Tensor:
         """Encode an image as a latent vector."""
@@ -112,58 +115,5 @@ class AutoEncoder:
                 self.optim.step()
                 losses.append(loss.item())
                 if len(losses) == steps:
-                    return np.array(losses)
-
-
-def main():
-    import matplotlib.pyplot as plt
-    batch_size = 32
-    transform = tv.transforms.Compose([
-        tv.transforms.Grayscale(num_output_channels=1),
-        tv.transforms.ToTensor(),
-        tv.transforms.Normalize((0.5,), (0.5,))
-        ])
-    trainset = datasets.MNIST(
-        root='./data',
-        train=True,
-        download=True,
-        transform=transform)
-    testset = datasets.MNIST(
-        root='./data',
-        train=False,
-        download=True,
-        transform=transform)
-    train_loader = DataLoader(
-        trainset,
-        batch_size=batch_size,
-        num_workers=2,
-        shuffle=True)
-    test_loader = DataLoader(
-        testset,
-        batch_size=batch_size,
-        num_workers=2,
-        shuffle=True)
-
-    AE = AutoEncoder(train_loader)
-    train_losses = []
-    for i in range(3):
-        _losses = AE.train_step(32)
-        train_losses.append(np.mean(_losses))
-        print(i+1, train_losses[-1])
-    my_iter = iter(test_loader)
-    samples, __ = next(my_iter)
-    reconstructed = AE.autoencode(samples).numpy()
-    reconstructed = (reconstructed + 1) / 2
-    reconstructed = reconstructed.transpose((0, 2, 3, 1))
-    encoded = AE.encode(samples).numpy()
-    for i in range(4):
-        print(encoded[i])
-        plt.figure()
-        plt.imshow(reconstructed[i, :, :, 0])
-        plt.figure()
-        plt.imshow(((samples.numpy() + 1) / 2).transpose((0, 2, 3, 1))[i, :, :, 0])
-        plt.show()
-
-
-if __name__ == '__main__':
-    main()
+                    yield np.array(losses)
+                    losses = []
